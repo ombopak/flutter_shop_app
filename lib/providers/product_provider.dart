@@ -123,9 +123,21 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  void updateProduct(String id, Product updateProduct) {
+  Future<void> updateProduct(String id, Product updateProduct) async {
     final prodIndex = _items.indexWhere((prod) => prod.id == id);
+
     if (prodIndex >= 0) {
+      final url = Uri.parse(
+          'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product/$id.json');
+// TODO initialize try catch here!
+      await http.patch(url,
+          body: json.encode({
+            'title': updateProduct.title,
+            'description': updateProduct.description,
+            'price': updateProduct.price,
+            'imageUrl': updateProduct.imageUrl,
+          }));
+
       _items[prodIndex] = updateProduct;
       notifyListeners();
     } else {
@@ -133,8 +145,22 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  void deleteProduct(String id) {
-    _items.removeWhere((prod) => prod.id == id);
+  Future<void> deleteProduct(String id) async {
+    final url = Uri.parse(
+        'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product/$id.json');
+    final deletingProductIndex = _items.indexWhere((prod) => prod.id == id);
+    late var deletingProduct = _items[deletingProductIndex];
+    _items.removeAt(deletingProductIndex);
     notifyListeners();
+
+    final response = await http.delete(url);
+
+    if (response.statusCode >= 400) {
+      _items.insert(deletingProductIndex, deletingProduct);
+      notifyListeners();
+      throw HttpException('Could not delete prodcut.');
+    }
+    // deletingProduct = Product(id: '', title: '', description: '', price: 0, imageUrl: '');
+    deletingProduct.dispose();
   }
 }
