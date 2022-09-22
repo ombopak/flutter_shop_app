@@ -24,25 +24,34 @@ class OrderProvider with ChangeNotifier {
   Future<void> fetchAndSetOrders() async {
     final url = Uri.parse(
         'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json');
-    final response = await http.get(url);
-    final List<OrderItem> loadedOrders = [];
-    final extractedData = json.decode(response.body) as Map<String, dynamic>;
-    extractedData.forEach((orderId, orderData) {
-      loadedOrders.add(OrderItem(
-          id: orderId,
-          amount: orderData['amount'],
-          dateTime: DateTime.parse(
-            orderData['dateTime'],
-          ),
-          products: (orderData['products'] as List<dynamic>).map((item) =>
-              CartItem(
-                  id: item['id'],
-                  price: item['price'],
-                  quantity: item['quantity'],
-                  title: item['item'],
-                  )
-                  )));
-    });
+    try {
+      final response = await http.get(url);
+      final List<OrderItem> loadedOrders = [];
+
+      final extractedData = json.decode(response.body) as Map<String, dynamic>;
+
+      extractedData.forEach((orderId, orderData) {
+        loadedOrders.add(OrderItem(
+            id: orderId,
+            amount: orderData['amount'],
+            dateTime: DateTime.parse(
+              orderData['dateTime'],
+            ),
+            products: (orderData['products'] as List<dynamic>)
+                .map((item) => CartItem(
+                      id: item['id'],
+                      price: item['price'],
+                      quantity: item['quantity'],
+                      title: item['title'],
+                    ))
+                .toList()));
+      });
+
+      _orders = loadedOrders.reversed.toList();
+      notifyListeners();
+    } on Exception catch (error) {
+      throw error;
+    }
   }
 
   Future<void> addOrder(List<CartItem> cartProducts, double total) async {
@@ -53,7 +62,7 @@ class OrderProvider with ChangeNotifier {
         body: json.encode({
           'amount': total,
           'dateTime': timestamp.toIso8601String(),
-          'product': cartProducts
+          'products': cartProducts
               .map((cp) => {
                     'id': cp.id,
                     'title': cp.title,

@@ -104,8 +104,10 @@ class ProductProvider with ChangeNotifier {
 
     try {
       final response = await http.get(url);
-      final extractedData = json.decode(response.body) as Map<String, dynamic>;
       final List<Product> loadedProduct = [];
+
+      final extractedData = json.decode(response.body) as Map<String, dynamic>;
+
       extractedData.forEach((prodId, prodData) {
         loadedProduct.add(Product(
           id: prodId,
@@ -149,7 +151,7 @@ class ProductProvider with ChangeNotifier {
     final url = Uri.parse(
         'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product/$id.json');
     final deletingProductIndex = _items.indexWhere((prod) => prod.id == id);
-    late var deletingProduct = _items[deletingProductIndex];
+    var deletingProduct = _items[deletingProductIndex];
     _items.removeAt(deletingProductIndex);
     notifyListeners();
 
