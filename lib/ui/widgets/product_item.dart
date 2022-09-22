@@ -21,6 +21,10 @@ class ProductItem extends StatelessWidget {
       context,
       listen: false,
     );
+    final authData = Provider.of<AuthProvider>(
+      context,
+      listen: false,
+    );
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: GridTile(
@@ -41,7 +45,7 @@ class ProductItem extends StatelessWidget {
           leading: Consumer<Product>(
             builder: (context, product, child) => IconButton(
               onPressed: () {
-                product.toggleFavoriteStatus();
+                product.toggleFavoriteStatus(authData.token, authData.userId);
               },
               // label: child, component that didnt rebuild when Consumer get notify.
               icon: Icon(

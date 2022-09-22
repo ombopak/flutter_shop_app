@@ -13,25 +13,55 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (ctx) => ProductProvider()),
-        ChangeNotifierProvider(create: (ctx) => CartProvider()),
-        ChangeNotifierProvider(create: (ctx) => OrderProvider()),
-      ],
-      child: MaterialApp(
-        title: 'My Shop',
-        theme: ThemeData(
-          primarySwatch: Colors.purple,
-          accentColor: Colors.deepOrange,
-          fontFamily: 'Lato',
+        ChangeNotifierProvider(
+          create: (ctx) => AuthProvider(),
         ),
-        home: ProductOverviewPage(),
-        routes: {
-          ProductDetailPage.routeName: (context) => ProductDetailPage(),
-          CartPage.routeName: (context) => CartPage(),
-          OrderPage.routeName: (context) => OrderPage(),
-          UserProductPage.routeName: (context) => UserProductPage(),
-          EditProductPage.routeName: (context) => EditProductPage(),
-        },
+        ChangeNotifierProxyProvider<AuthProvider, ProductProvider>(
+          create: (_) => ProductProvider('', '', []),
+          update: (ctx, auth, previousProductProvider) => ProductProvider(
+              auth.token,
+              auth.userId,
+              previousProductProvider == null
+                  ? []
+                  : previousProductProvider.items),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) => CartProvider(),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, OrderProvider>(
+            create: (ctx) => OrderProvider([], '', ''),
+            update: (ctx, auth, previousOrderProvider) => OrderProvider(
+                previousOrderProvider == null
+                    ? []
+                    : previousOrderProvider.orders,
+                auth.userId,
+                auth.token)),
+      ],
+      child: Consumer<AuthProvider>(
+        builder: (ctx, auth, _) => MaterialApp(
+          title: 'My Shop',
+          theme: ThemeData(
+            primarySwatch: Colors.purple,
+            accentColor: Colors.deepOrange,
+            fontFamily: 'Lato',
+          ),
+          home: auth.isAuth
+              ? ProductOverviewPage()
+              : FutureBuilder(
+                  future: auth.tryAutoLogin(),
+                  builder: (context, snapshot) =>
+                      snapshot.connectionState == ConnectionState.waiting
+                          ? SplashScreen()
+                          : AuthPage(),
+                ),
+          routes: {
+            ProductDetailPage.routeName: (context) => ProductDetailPage(),
+            CartPage.routeName: (context) => CartPage(),
+            OrderPage.routeName: (context) => OrderPage(),
+            UserProductPage.routeName: (context) => UserProductPage(),
+            EditProductPage.routeName: (context) => EditProductPage(),
+          },
+        ),
       ),
     );
   }

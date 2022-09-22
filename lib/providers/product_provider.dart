@@ -36,7 +36,7 @@ class ProductProvider with ChangeNotifier {
     // ),
   ];
 
-  var _showFavoritesOnly = false;
+  //var _showFavoritesOnly = false;
 
   // void showFavoritesOnly() {
   //   _showFavoritesOnly = true;
@@ -48,14 +48,19 @@ class ProductProvider with ChangeNotifier {
   //   notifyListeners();
   // }
 
+  final String? authToken;
+  final String? userId;
+
+  ProductProvider(this.authToken, this.userId, this._items);
+
   List<Product> get favoriteItems {
     return _items.where((prodItem) => prodItem.isFavorite).toList();
   }
 
   List<Product> get items {
-    if (_showFavoritesOnly) {
-      return _items.where((prodItem) => prodItem.isFavorite).toList();
-    }
+    // if (_showFavoritesOnly) {
+    // return _items.where((prodItem) => prodItem.isFavorite).toList();
+    // }
     return [..._items];
   }
 
@@ -65,7 +70,7 @@ class ProductProvider with ChangeNotifier {
 
   Future<void> addProduct(Product product) async {
     final url = Uri.parse(
-        'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product.json');
+        'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product.json?auth=$authToken');
 
     try {
       final response = await http.post(
@@ -76,7 +81,7 @@ class ProductProvider with ChangeNotifier {
             'description': product.description,
             'imageUrl': product.imageUrl,
             'price': product.price,
-            'isFavorite': product.isFavorite,
+            'creatorId': userId,
           },
         ),
       );
@@ -98,16 +103,24 @@ class ProductProvider with ChangeNotifier {
     // print(json.decode(respone.body));
   }
 
-  Future<void> fetchAndSetProducts() async {
-    final url = Uri.parse(
-        'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product.json');
+  Future<void> fetchAndSetProducts([bool filterByUser = false]) async {
+    final filterString = filterByUser ? 'orderBy="creatorId"&equalTo="$userId"' : '';
+    var url = Uri.parse(
+        'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product.json?auth=$authToken&$filterString');
 
     try {
       final response = await http.get(url);
-      final List<Product> loadedProduct = [];
-
       final extractedData = json.decode(response.body) as Map<String, dynamic>;
+      if (extractedData == null) {
+        return;
+      }
 
+       url = Uri.parse(
+          'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/userFavorites/$userId.json?auth=$authToken');
+      final favoriteResponse = await http.get(url);
+      final favoriteData = json.decode(favoriteResponse.body);
+      // print(favoriteData);
+      final List<Product> loadedProduct = [];
       extractedData.forEach((prodId, prodData) {
         loadedProduct.add(Product(
           id: prodId,
@@ -115,7 +128,8 @@ class ProductProvider with ChangeNotifier {
           description: prodData['description'],
           price: prodData['price'],
           imageUrl: prodData['imageUrl'],
-          isFavorite: prodData['isFavorite'],
+          isFavorite:
+              favoriteData == null ? false : favoriteData[prodId] ?? false,
         ));
       });
       _items = loadedProduct;
@@ -130,7 +144,7 @@ class ProductProvider with ChangeNotifier {
 
     if (prodIndex >= 0) {
       final url = Uri.parse(
-          'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product/$id.json');
+          'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product/$id.json?auth=$authToken');
 // TODO initialize try catch here!
       await http.patch(url,
           body: json.encode({
@@ -149,7 +163,7 @@ class ProductProvider with ChangeNotifier {
 
   Future<void> deleteProduct(String id) async {
     final url = Uri.parse(
-        'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product/$id.json');
+        'https://shop-app-c5564-default-rtdb.asia-southeast1.firebasedatabase.app/product/$id.json?auth=$authToken');
     final deletingProductIndex = _items.indexWhere((prod) => prod.id == id);
     var deletingProduct = _items[deletingProductIndex];
     _items.removeAt(deletingProductIndex);
